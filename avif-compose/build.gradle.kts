@@ -29,7 +29,7 @@ kotlin {
         commonMain {
             dependencies {
                 api(projects.avif)
-                compileOnly(compose.ui)
+                api(compose.ui)
             }
         }
     }

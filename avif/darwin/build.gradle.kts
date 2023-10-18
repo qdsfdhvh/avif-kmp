@@ -7,16 +7,46 @@ val buildLibAvif by tasks.creating {
     group = taskGroup
 }
 
-val buildLibAvifNative by tasks.creating(Exec::class) {
+val buildLibAvifDarwin by tasks.creating(Exec::class) {
     group = taskGroup
     buildLibAvif.dependsOn(this)
 
-    inputs.files(projectDir.resolve("scripts/build-native.sh"))
-    outputs.dir(projectDir.resolve("build/native"))
+    // TODO: wait to support linux & windows
+    onlyIf { currentOs.isMacOsX }
+
+    val host = System.getProperty("os.arch")
+    val target = findProperty("ARCH")
+
+    val outputDir = projectDir.resolve("build/darwin")
+    val darwinCrossFile = projectDir.resolve("crossfiles/darwin/$target-apple-darwin.meson")
+
+    inputs.files(projectDir.resolve("scripts/build-darwin.sh"))
+    inputs.files(darwinCrossFile)
+    inputs.files(iosCmakeFile)
+    outputs.dir(outputDir)
 
     workingDir = projectDir
 
-    commandLine("bash", "-l", "scripts/build-native.sh")
+    environment("DARWIN_OUTPUT_DIR", outputDir)
+    environment("DARWIN_CMAKE_PARAMS", buildString {
+        if (target != null && host != target) {
+            val platform = when (target) {
+                "aarch64" -> "MAC_ARM64"
+                "x86_64" -> "MAC"
+                else -> ""
+            }
+            append("-DCMAKE_TOOLCHAIN_FILE=${iosCmakeFile}")
+            append(' ')
+            append("-DPLATFORM=${platform}")
+        }
+    })
+    environment("DARWIN_MESON_PARAMS", buildString {
+        if (target != null && host != target) {
+            append("--cross-file=${darwinCrossFile}")
+        }
+    })
+
+    commandLine("bash", "-l", "scripts/build-darwin.sh")
 }
 
 val buildLibAvifAndroid by tasks.creating {
@@ -60,7 +90,15 @@ fun createBuildLibAvifAndroidTask(abi: String) = tasks.creating(Exec::class) {
     environment("TOOLCHAIN", toolchain)
     environment("ABI", abi)
     environment("ANDROID_NDK", androidExtension.ndkDirectory)
-    environment("ANDROID_MIN_SDK", androidExtension.defaultConfig.minSdk ?: 21)
+    environment("ANDROID_CMAKE_PARAMS", buildString {
+        append("-DCMAKE_TOOLCHAIN_FILE=${androidExtension.ndkDirectory}/build/cmake/android.toolchain.cmake")
+        append(' ')
+        append("-DANDROID_ABI=$abi")
+        append(' ')
+        append("-DANDROID_PLATFORM=android-${androidExtension.defaultConfig.minSdk ?: 21}")
+        append(' ')
+        append("-DANDROID_STL=c++_shared")
+    })
     environment("ANDROID_OUTPUT_DIR", outputDir)
 
     commandLine("bash", "-l", "scripts/build-android.sh")
@@ -104,7 +142,6 @@ fun createBuildLibAvifIosTask(target: String) = tasks.creating(Exec::class) {
 
     val outputDir = projectDir.resolve("build/ios/$arch")
     val iosCrossFile = projectDir.resolve("crossfiles/ios/$iosCrossFileName")
-    val iosCmakeFile = projectDir.resolve("ios.toolchain.cmake")
 
     inputs.files(projectDir.resolve("scripts/build-ios.sh"))
     inputs.files(iosCrossFile)
@@ -114,13 +151,20 @@ fun createBuildLibAvifIosTask(target: String) = tasks.creating(Exec::class) {
     workingDir = projectDir
 
     environment("IOS_CROSS_FILE", iosCrossFile)
-    environment("IOS_TOOLCHAIN_FILE", iosCmakeFile)
-    environment("BUILD_PLATFORM1", iosToolchainPlatform)
     environment("IOS_OUTPUT_DIR", outputDir)
     environment("ARCH", arch)
 
+    environment("IOS_CMAKE_PARAMS", buildString {
+        append("-DCMAKE_TOOLCHAIN_FILE=${iosCmakeFile}")
+        append(' ')
+        append("-DPLATFORM=${iosToolchainPlatform}")
+    })
+
     commandLine("bash", "-l", "scripts/build-ios.sh")
 }
+
+private val iosCmakeFile: File
+    get() = projectDir.resolve("ios.toolchain.cmake")
 
 private val androidExtension: LibraryExtension
     get() = project(":avif").extensions["android"] as LibraryExtension

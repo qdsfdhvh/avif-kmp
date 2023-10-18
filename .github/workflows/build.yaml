@@ -3,7 +3,6 @@ name: Build CI
 on:
   pull_request: { }
   workflow_dispatch: { }
-  push: { }
 
 jobs:
   build:
@@ -23,24 +22,31 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - name: checkout
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: set up JDK
+      - name: Set up JDK
         uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
           java-version: 20
 
-      - name: build libavif
-        run: ./gradlew :avif:darwin:buildLibAvifNative
+      - name: Install dependencies
+        run: brew install meson nasm
 
-      - name: build libavif-jvm
-        run: ./gradlew :avif:buildLibAvifNativeKLib
+      - name: Init submodule avif
+        run: git submodule update --init --recursive
 
-      - uses: actions/upload-artifact@v3
+      - name: Build libavif
+        run: ./gradlew :avif:darwin:buildLibAvifDarwin -PARCH=${{ matrix.arch }} -PCMAKE-ARCH=${{ matrix.cmake-arch }}
+
+      - name: Build libavif-jvm.klb
+        run: ./gradlew :avif:buildLibAvifDarwinKLib -PARCH=${{ matrix.arch }} -PCMAKE-ARCH=${{ matrix.cmake-arch }}
+
+      - name: Upload libavif-jvm.klib
+        uses: actions/upload-artifact@v3
         with:
-          name: jvm-native-libraries
+          name: jvm-native-${{ matrix.arch }}
           path: avif/src/jvmMain/resources/*
           if-no-files-found: error
 

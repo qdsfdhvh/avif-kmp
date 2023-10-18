@@ -121,12 +121,26 @@ android {
     ndkVersion = "25.1.8937393"
 }
 
-val buildLibAvifNativeKLib by tasks.creating(Exec::class) {
+val buildLibAvifDarwinKLib by tasks.creating(Exec::class) {
     group = "avif"
 
     inputs.files(projectDir.resolve("build-jvm-klib.sh"))
 
     workingDir = projectDir
 
-    commandLine("bash", "-l", "build-jvm-klib.sh")
+    commandLine(
+        buildList {
+            add("bash")
+            add("-l")
+            add("build-jvm-klib.sh")
+            findProperty("ARCH")?.let {
+                add("-a")
+                add(it)
+            }
+            findProperty("CMAKE-ARCH")?.let {
+                add("-c")
+                add(it)
+            }
+        }
+    )
 }

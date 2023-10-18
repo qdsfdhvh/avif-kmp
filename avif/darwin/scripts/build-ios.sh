@@ -35,9 +35,8 @@ build_dir="_build-ios_${ARCH}"
 rm -rf "${build_dir}"
 mkdir -p "${build_dir}"
 
-cmake -B "${build_dir}" -G Xcode \
-  -DCMAKE_TOOLCHAIN_FILE="${IOS_TOOLCHAIN_FILE}" \
-  -DPLATFORM="${BUILD_PLATFORM1}" \
+cmake -B "${build_dir}" -G Xcode ${IOS_CMAKE_PARAMS} \
+  -DCMAKE_BUILD_TYPE=Release \
   -DBUILD_SHARED_LIBS=OFF \
   -DAVIF_CODEC_DAV1D=ON \
   -DAVIF_LOCAL_DAV1D=ON \

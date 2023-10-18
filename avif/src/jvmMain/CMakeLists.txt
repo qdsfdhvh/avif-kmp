@@ -15,14 +15,10 @@ include_directories(${JNI_INCLUDE_DIRS})
 set(PROJECT_SRC_DIR ${CMAKE_SOURCE_DIR}/../../src)
 set(PROJECT_LIB_DIR ${CMAKE_SOURCE_DIR}/../../darwin)
 
-add_library(yuv STATIC IMPORTED)
-add_library(sharpyuv STATIC IMPORTED)
 add_library(dav1d STATIC IMPORTED)
 add_library(avif STATIC IMPORTED)
-set_target_properties(yuv PROPERTIES IMPORTED_LOCATION ${PROJECT_LIB_DIR}/build/native/libyuv.a)
-set_target_properties(sharpyuv PROPERTIES IMPORTED_LOCATION ${PROJECT_LIB_DIR}/build/native/libsharpyuv.a)
-set_target_properties(dav1d PROPERTIES IMPORTED_LOCATION ${PROJECT_LIB_DIR}/build/native/libdav1d.a)
-set_target_properties(avif PROPERTIES IMPORTED_LOCATION ${PROJECT_LIB_DIR}/build/native/libavif.a)
+set_target_properties(dav1d PROPERTIES IMPORTED_LOCATION ${PROJECT_LIB_DIR}/build/darwin/libdav1d.a)
+set_target_properties(avif PROPERTIES IMPORTED_LOCATION ${PROJECT_LIB_DIR}/build/darwin/libavif.a)
 
 include_directories(${PROJECT_LIB_DIR}/libavif/include)
 include_directories(${PROJECT_SRC_DIR}/jniMain/cpp)
@@ -33,4 +29,4 @@ file(GLOB_RECURSE sources
         ${PROJECT_SRC_DIR}/jniMain/cpp/*.cpp)
 add_library(avif-jvm SHARED ${sources})
 
-target_link_libraries(avif-jvm yuv sharpyuv dav1d avif)
+target_link_libraries(avif-jvm dav1d avif)
